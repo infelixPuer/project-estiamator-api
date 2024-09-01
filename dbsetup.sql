@@ -33,11 +33,13 @@ CREATE TABLE employees (
 );
 
 CREATE TABLE assignments (
-    assignment_id SERIAL PRIMARY KEY,
+    assignment_id SERIAL NOT NULL,
     project_id INT REFERENCES projects(project_id),
     employee_id INT REFERENCES employees(employee_id),
+    cost NUMERIC(2) NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    finished_at TIMESTAMP
+    finished_at TIMESTAMP,
+    PRIMARY KEY (assingmedt_id, project_id, employee_id)
 );
 
 INSERT INTO users (username, email, password, role)
