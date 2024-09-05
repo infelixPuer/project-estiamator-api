@@ -34,18 +34,19 @@ CREATE TABLE employees (
 
 CREATE TABLE assignments (
     assignment_id SERIAL NOT NULL,
-    project_id INT REFERENCES projects(project_id),
-    employee_id INT REFERENCES employees(employee_id),
-    cost NUMERIC(2) NOT NULL,
+    project_id INT REFERENCES projects(project_id) ON DELETE CASCADE,
+    employee_id INT REFERENCES employees(employee_id) ON DELETE CASCADE,
+    cost NUMERIC(10, 2) NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     finished_at TIMESTAMP,
-    PRIMARY KEY (assingmedt_id, project_id, employee_id)
+    PRIMARY KEY (assignment_id, project_id, employee_id)
 );
 
 INSERT INTO users (username, email, password, role)
 VALUES
 ('estimator1', 'estimator1@example.com', 'hashed_password1', 'estimator'),
-('admin1', 'admin1@example.com', 'hashed_password2', 'admin');
+('admin1', 'admin1@example.com', 'hashed_password2', 'admin'),
+('test', 'test@example.com', 'test_password', 'test');
 
 INSERT INTO projects (user_id, title, description)
 VALUES
@@ -58,9 +59,9 @@ VALUES
 ('Bob', 'Johnson', 'bob.johnson@example.com', 'designer'),
 ('Charlie', 'Brown', 'charlie.brown@example.com', 'QA engineer');
 
-INSERT INTO assignments (project_id, employee_id)
+INSERT INTO assignments (project_id, employee_id, cost)
 VALUES
-(1, 1),
-(2, 2);
+(1, 1, 2000),
+(2, 2, 3000);
 
 UPDATE employees SET is_available = FALSE WHERE employee_id IN (1, 2);

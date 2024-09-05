@@ -52,7 +52,7 @@
 > }
 > ```
 
-### 2. Endpoint `api/users1`:
+### 2. Endpoint `api/users`:
 
 - GET `api/users` - get all registered users
     - Server should respond with status code 200 and all users records.
@@ -196,6 +196,7 @@
 
 - PUT `api/users/{userId}` - update existing user. The request body should contain the updated information for the user.
     - Server should answer with status code 200 and update the record
+    - Server should answer with status code 400 and corresponding message if request body doesn't contain required fields
     - Server should answer with status code 404 and corresponding message if record with id == userId doesn't exist
 
 | Parameter | Type | Required | Description|
@@ -323,7 +324,7 @@
 > }
 > ```
 
-- GET `api/projects?status=:status` - get a list of projects with the specified status 
+- GET `api/projects/status` - get a list of projects with the specified status 
     - Server should anwser with status code 200 and array of records with status == status if it exists
     - Server should anwser with status code 404 and corresponding message if record with status == status doesn't exist
 
@@ -431,8 +432,6 @@
 - DELETE `api/projects/{projectId}` - delete existing project from databse
     - Server should answer with status code 204 if the record was found and delete the record
     - Server should answer with status code 404 and corresponding message if record with id == project doesn't exist 
-
-| Parameter | Type | Required | Description|
 | --- | --- | --- | --- |
 | `projectId` | string | Yes | project's ID |
 
@@ -716,7 +715,7 @@
 > }
 > ```
 
-- GET `api/assingments?cost=:cost` - get a list of assingments with the specified status 
+- GET `api/assingments/:minCost/:maxCost` - get a list of assingments with cost in range between costMin and costMax
     - Server should anwser with status code 200 and array of records with status == status if it exists
     - Server should anwser with status code 404 and corresponding message if record with status == status doesn't exist
 
