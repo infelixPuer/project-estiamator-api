@@ -1,8 +1,5 @@
 # Project Estimator API documentation
 
-## Content
-
----
 
 ## Description
 
@@ -60,8 +57,7 @@
 
 | Parameter | Type | Required | Description|
 | --- | --- | --- | --- |
-| `first_name` | string | Yes | Part of the first name of the user to search for. |
-| `last_name` | string | Yes | Part of the last name of the user to search for. |
+| `username` | string | Yes | Part of the first name of the user to search for. |
 | `email` | string | Yes | Part of the email of the user to search for. |
 | `role` | string | Yes | Part of the role of the user to search for. |
 
@@ -79,8 +75,7 @@
 > ```
 > [{
 >     "user_id": 1,
->     "first_name": "string",
->     "last_name": "string",
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -88,8 +83,7 @@
 > },
 > {
 >     "user_id": 2,
->     "first_name": "string",
->     "last_name": "string",
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -104,7 +98,7 @@
 >
 > ```
 > curl -X 'GET' \\
-> 'api/users?name=st' \\
+> 'api/users?username=st' \\
 > ```
 
 > Response body 
@@ -112,8 +106,7 @@
 > ```
 > [{
 >     "user_id": 1,
->     "first_name": "Steve",
->     "last_name": "Brown",
+>     "username": "Steve",
 >     "email": "steve.brown@example.com",
 >     "password": "password1",
 >     "role": "delevoper",
@@ -121,8 +114,7 @@
 > },
 > {
 >     "user_id": 3,
->     "first_name": "Stan",
->     "last_name": "Lee",
+>     "username": "Stan",
 >     "email": "stan.lee@example.com",
 >     "password": "password3",
 >     "role": "designer",
@@ -150,8 +142,7 @@
 > ```
 > {
 >     "user_id": 1,
->     "first_name": "string",
->     "last_name": "string",
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -168,11 +159,10 @@
 >
 > ```
 > curl -X 'POST' \\
-> 'api/users/0' \\
+> 'api/users' \\
 > -d '{
->     "user_id": 0,
->     "first_name": "string",
->     "last_name": "string",
+>     "user_id": int,
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -184,9 +174,8 @@
 >
 > ```
 > {
->     "user_id": 0,
->     "first_name": "string",
->     "last_name": "string",
+>     "user_id": int,
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -210,8 +199,7 @@
 > 'api/users/3' \\
 > -d '{
 >     "user_id": 3,
->     "first_name": "string",
->     "last_name": "string",
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -224,8 +212,7 @@
 > ```
 > {
 >     "user_id": 3,
->     "first_name": "string",
->     "last_name": "string",
+>     "username": "string",
 >     "email": "string",
 >     "password": "string",
 >     "role": "string",
@@ -265,7 +252,6 @@
 | `title` | string | Yes | Part of the title of the project to search for. |
 | `user_id` | string | Yes | User associated with the project to search for. |
 | `description` | string | Yes | Part of the description of the project to search for. |
-| `` | string | Yes | Part of the description of the project to search for. |
 | `status` | string | Yes | Status of the project to search for. |
 
 > Request
@@ -500,7 +486,7 @@
 >
 > ```
 > curl -X 'GET' \\
-> 'api/employees?name=st' \\
+> 'api/employees?first_name=st' \\
 > ```
 
 > Response body 
@@ -649,10 +635,10 @@
 > No Content
 > ```
 
-### 5. Endpoint `api/assingments`:
+### 5. Endpoint `api/assignments`:
 
-- GET `api/assingments` - get all assingments 
-    - Server should respond with status code 200 and all assingments records.
+- GET `api/assignment` - get all assingments 
+    - Server should respond with status code 200 and all assignment records.
     - Possible parameters:
 
 | Parameter | Type | Required | Description|
@@ -663,7 +649,7 @@
 >
 > ```
 > curl -X 'GET' \\
-> '/assingments' \\
+> '/assignment' \\
 > ```
 
 > Response body 
@@ -675,7 +661,7 @@
 >     "employee_id": 1,
 >     "cost": "string",
 >     "assigned_at": datetime,
->     "assigned_at": datetime,
+>     "finished_at": datetime,
 > },
 > {
 >     "assignment_id": 1,
@@ -683,11 +669,11 @@
 >     "employee_id": 7,
 >     "cost": "string",
 >     "assigned_at": datetime,
->     "assigned_at": datetime,
+>     "finished_at": datetime,
 > }]
 > ```
 
-- GET `api/assingments/{assignmentId}` - get one assingment by ID
+- GET `api/assignment/{assignmentId}` - get one assingment by ID
     - Server should anwser with status code 200 and record with id == assingmentId if it exists
     - Server should anwser with status code 404 and corresponding message if record with id == assignmentId doesn't exist
 
@@ -699,7 +685,7 @@
 >
 > ```
 > curl -X 'GET' \\
-> 'api/assingments/1' \\
+> 'api/assignment/1' \\
 > ```
 
 > Response body 
@@ -715,7 +701,7 @@
 > }
 > ```
 
-- GET `api/assingments/:minCost/:maxCost` - get a list of assingments with cost in range between costMin and costMax
+- GET `api/assignment/:minCost/:maxCost` - get a list of assingments with cost in range between costMin and costMax
     - Server should anwser with status code 200 and array of records with status == status if it exists
     - Server should anwser with status code 404 and corresponding message if record with status == status doesn't exist
 
@@ -728,7 +714,7 @@
 >
 > ```
 > curl -X 'GET' \\
-> 'api/assingments?costMin=1000&costMax=2000' \\
+> 'api/assignment?costMin=1000&costMax=2000' \\
 > ```
 
 > Response body 
@@ -752,7 +738,7 @@
 > }]
 > ```
 
-- POST `api/assingments` - create a record with new assingment and put it in database. The request body should contain the required information for creating a new assingment, such as project_id, employee_id and cost.
+- POST `api/assignment` - create a record with new assingment and put it in database. The request body should contain the required information for creating a new assingment, such as project_id, employee_id and cost.
     - Server should answer with status code 201 and newly created record.
     - Server should answer with status code 400 and corresponding message if request body does not constain required fields
 
@@ -761,7 +747,7 @@
 >
 > ```
 > curl -X 'POST' \\
-> 'api/assingments/0' \\
+> 'api/assignment/0' \\
 > -d '{
 >     "project_id": 1,
 >     "employee_id": 2,
@@ -782,7 +768,7 @@
 > }
 > ```
 
-- PUT `api/assingments/{assingmentId}` - update existing assingment. The request body should contain the updated information for the assingment.
+- PUT `api/assignment/{assingmentId}` - update existing assingment. The request body should contain the updated information for the assingment.
     - Server should answer with status code 200 and update the record
     - Server should answer with status code 404 and corresponding message if record with id == assingmentId doesn't exist
 
@@ -794,7 +780,7 @@
 >
 > ```
 > curl -X 'PUT' \\
-> 'api/assingments/3' \\
+> 'api/assignment/3' \\
 > -d '{
 >     "assignment_id": 3,
 >     "project_id": 1,
@@ -818,7 +804,7 @@
 > }
 > ```
 
-- DELETE `api/assingments/{assingmentId}` - delete existing assingment from databse
+- DELETE `api/assignment/{assingmentId}` - delete existing assingment from databse
     - Server should answer with status code 204 if the record was found and delete the record
     - Server should answer with status code 404 and corresponding message if record with id == assingment doesn't exist 
 
@@ -830,7 +816,7 @@
 >
 > ```
 > curl -X 'DELETE' \\
-> 'api/assingments/3' \\
+> 'api/assignment/3' \\
 > ```
 
 > Response body 
