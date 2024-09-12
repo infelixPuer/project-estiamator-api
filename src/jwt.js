@@ -23,7 +23,7 @@ function sign_jwt(header, payload, privateKey) {
     const data = base64UrlEncode(JSON.stringify(header)) + '.' + base64UrlEncode(JSON.stringify(payload));
 
     const sign = createSign('SHA256');
-    sign.update(data);
+    sign.write(data);
     sign.end();
 
     const signature = base64UrlEncode(sign.sign(privateKey, 'base64'));
@@ -37,7 +37,7 @@ function verify_jwt(jwt, publicKey) {
     const data = headerB64 + '.' + payloadB64;
 
     const verify = createVerify('SHA256');
-    verify.update(data);
+    verify.write(data);
     verify.end();
 
     const isValid = verify.verify(publicKey, base64UrlDecode(signatureB64), 'base64');

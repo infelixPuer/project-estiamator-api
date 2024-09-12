@@ -1,49 +1,69 @@
+const { generateKeyPairSync } = require('crypto');
 const express = require('express');
 const fs = require('fs');
-const dotenv = require('dotenv');
-const jwt = require('./src/jwt.js');
+const { sign_jwt, verify_jwt } = require('./jwt.js');
 const { Pool } = require('pg');
+const { init } = require('../db/postgres.js');
+require('dotenv').config();
 
 const app = express();
 const port = 3000;
 
-
-const privateKey = fs.readFileSync('./private_key.pem', 'utf-8');
-const publicKey = fs.readFileSync('./public_key.pem', 'utf-8');
-
-dotenv.config();
-
-const pool = new Pool({
-    host: process.env.HOST,
-    user: process.env.USER,
-    port: process.env.PORT,
-    password: process.env.PASSWORD, 
-    database: process.env.DATABASE
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: {
+	type: 'spki',
+	format: 'pem',
+    },
+    privateKeyEncoding: {
+	type: 'pkcs8',
+	format: 'pem',
+	cipher: 'aes-256-cbc',
+	passphrase: 'fuck_this_shit_im_done'
+    },
 });
+
+// const privateKey = fs.readFileSync('./private_key.pem', 'utf-8');
+// const publicKey = fs.readFileSync('./public_key.pem', 'utf-8');
+
+fs.writeFileSync('private_key.pem', privateKey, 'utf-8');
+fs.writeFileSync('public_key.pem', publicKey, 'utf-8');
+
+const config = {
+    host: process.env.POSTGRES_HOST,
+    user: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD,
+    database: process.env.POSTGRES_DB,
+};
+const client = new Pool(config);
+
+init();
 
 app.use(express.json());
 
 // 
 // /api/login enpoint
 //
-
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
+
+    console.log(config);
+    console.log(client);
 
     if (!username || !password) {
 	return res.status(400).json({ message: 'Username and password are required' });
     }
 
     try {
-	const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+	const result = await client.query('SELECT * FROM users WHERE username = $1', [username]);
 
 	if (result.rows.length === 0) {
-	    return res.status(404).json({ message: 'Username was not found!' });
+	    return res.status(404).json({ message: 'Username was not found' });
 	}
 
 	// do i need to check this?
 	if (!result.rows[0] || result.rows[0].username !== username) {
-	    return res.status(404).json({ message: 'Username was not found!' });
+	    return res.status(404).json({ message: 'Username was not found' });
 	}
 
 	const isMatch = password === result.rows[0].password;
@@ -53,7 +73,7 @@ app.post('/api/login', async (req, res) => {
 	}
 
 	const header = {
-	    alg: 'RSA256',
+	    alg: 'RS246',
 	    typ: 'JWT'
 	};
 
@@ -61,7 +81,7 @@ app.post('/api/login', async (req, res) => {
 	    name: username
 	};
 
-	const token = jwt.sign_jwt(header, payload, privateKey);
+	const token = sign_jwt(header, payload, privateKey);
 
 	return res.json({ token });
     } catch (err) {
@@ -78,7 +98,7 @@ function authenticateToken(req, res, next) {
 	return res.sendStatus(401).json({ message: 'You are not authorized' });
     }
 
-    if (!jwt.verify_jwt(token, publicKey)) {
+    if (!verify_jwt(token, publicKey)) {
 	return res.sendStatus(403).json({ message: 'Error while verifying the token' });
     }
 
@@ -151,10 +171,10 @@ app.get('/api/users', authenticateToken, async (req, res) => {
     }
 
     try {
-	const result = await pool.query(query, values);
-	return res.json(result.rows);
+	const result = await client.query(query, values);
+	return res.status(200).json(result.rows);
     } catch (err) {
-	console.error('Error fetching users: ', err);
+	console.error('Error while fetching users');
 	return res.status(500).json({ message: 'Server error' });
     }
 });
@@ -162,9 +182,9 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // GET api/users/:userId - get a user by id
 app.get('/api/users/:userId', authenticateToken, async (req, res) => {
     try {
-	const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [req.params.userId]);
+	const result = await client.query('SELECT * FROM users WHERE user_id = $1', [req.params.userId]);
 
-	if (!result.rows)
+	if (!result.rows || result.rows.length === 0)
 	    return res.status(404).json({ message: 'User not found' });
 
 	res.status(200).json(result.rows);
@@ -179,12 +199,12 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     const { username, email, password, role } = req.body;
 
     if (!username || !email || !password || !role) {
-	res.status(400).json({ message: 'Request doesn\'t containt required fields' });
+	res.status(400).json({ message: 'Request doesn\'t contain required fields' });
 	return;
     }
 
     try {
-	const result = await pool.query('INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *', [username, email, password, role]);
+	const result = await client.query('INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING *', [username, email, password, role]);
 	res.status(201).json(result.rows[0]);
     } catch (err) {
 	console.error('Error inserting new user', err);
@@ -198,16 +218,16 @@ app.put('/api/users/:userId', authenticateToken, async (req, res) => {
     const { username, email, password, role } = req.body;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM users WHERE user_id = $1
 	    `, [userId]);
 
 	if (check.rows.length === 0) {
-	    await pool.end();
+	    await client.end();
 	    return res.status(404).json({ message: 'User not found' });
 	}
 
-	const result = await pool.query(`
+	const result = await client.query(`
 	    UPDATE users
 	    SET username = $1, email = $2, password = $3, role = $4
 	    WHERE user_id = $5
@@ -226,21 +246,26 @@ app.delete('/api/users/:userId', authenticateToken, async (req, res) => {
     const { userId } = req.params;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM users
 	    WHERE user_id = $1
 	    `, [userId]);
+
+	console.log('before checking');
 
 	if (check.rows.length === 0) {
 	    return res.status(404).json({ message: 'User not found' });
 	}
 
+	console.log('after checking');
 
-	await pool.query(`
+	const result = await client.query(`
 	    DELETE FROM users 
 	    WHERE user_id = $1
 	    `, [userId]);
-	return res.status(204);
+
+	console.log('after querying');
+	return res.status(204).json();
     } catch (err) {
 	console.error(err);
 	res.status(500).json({ message: 'Server error' });
@@ -282,7 +307,7 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
     }
 
     try {
-	const result = await pool.query(query, values);
+	const result = await client.query(query, values);
 	res.status(200).json(result.rows);
     } catch (err) {
 	console.error('Error fetching projects: ', err);
@@ -298,9 +323,9 @@ app.get('/api/projects/:projectId', authenticateToken, async (req, res) => {
     const projectId = req.params;
 
     try {
-	const result = await pool.query('SELECT * FROM projects WHERE projectd_id = $1', [projectId]);
+	const result = await client.query('SELECT * FROM projects WHERE projectd_id = $1', [projectId]);
 
-	if (!result.rows) {
+	if (!result.rows || result.rows.length === 0) {
 	    return res.status(404).json({ message: 'Project not found' });
 	}
 
@@ -316,7 +341,7 @@ app.get('/api/projects/:status', authenticateToken, async (req, res) => {
     const status = req.params;
 
     try {
-	const result = await pool.query(`
+	const result = await client.query(`
 	SELECT * FROM projects 
 	WHERE status = $1`, [status]);
 
@@ -336,17 +361,17 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
     const { userId, title, description} = req.body;
 
     if (!userId || !title || !description) {
-	res.status(400).json({ message: 'Request doesn\'t containt required fields' });
+	res.status(400).json({ message: 'Request doesn\'t contain required fields' });
 	return;
     }
 
-    const userCheck = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+    const userCheck = await client.query('SELECT * FROM users WHERE user_id = $1', [userId]);
     
-    if (!userCheck.rows) 
+    if (userCheck.rows.length === 0) 
 	return res.status(400).json({ message: 'User with provided user id does not exist'});	
 
     try {
-	const result = await pool.query('INSERT INTO projects (user_id, title, description) VALUES ($1, $2, $3) RETURNING *', [userId, title, description]);
+	const result = await client.query('INSERT INTO projects (user_id, title, description) VALUES ($1, $2, $3) RETURNING *', [userId, title, description]);
 	res.status(201).json(result.rows[0]);
     } catch (err) {
 	console.error('Error inserting new project', err);
@@ -360,14 +385,14 @@ app.put('/api/projects/:projectId', authenticateToken, async (req, res) => {
     const { userId, title, description, status } = req.body;
 
     try {
-	const projectCheck = await pool.query(`
+	const projectCheck = await client.query(`
 	    SELECT * FROM projects WHERE project_id = $1
 	    `, [projectId]);
 
 	if (projectCheck.rows.length === 0)
 	    return res.status(404).json({ message: 'Project not found' });
 
-	const result = await pool.query(`
+	const result = await client.query(`
 	    UPDATE projects
 	    SET user_id = $1, title = $2, description = $3, status = $4
 	    WHERE project_id = $5
@@ -386,7 +411,7 @@ app.delete('/api/projects/:projectId', authenticateToken, async (req, res) => {
     const { projectId } = req.params;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM projects
 	    WHERE project_id = $1
 	    `, [projectId]);
@@ -395,11 +420,11 @@ app.delete('/api/projects/:projectId', authenticateToken, async (req, res) => {
 	    return res.status(404).json({ message: 'Project not found' });
 	}
 
-	await pool.query(`
+	await client.query(`
 	    DELETE FROM projects 
 	    WHERE project_id = $1
 	    `, [projectId]);
-	return res.status(204);
+	return res.status(204).json();
     } catch (err) {
 	console.error(err);
 	res.status(500).json({ message: 'Server error' });
@@ -412,7 +437,7 @@ app.delete('/api/projects/:projectId', authenticateToken, async (req, res) => {
 // GET api/employees - get all registered employees 
 app.get('/api/employees', authenticateToken, async (req, res) => {
     try {
-	const result = await pool.query('SELECT * FROM employees ORDER BY employee_id');
+	const result = await client.query('SELECT * FROM employees ORDER BY employee_id');
 	res.status(200).json(result.rows);
     } catch (err) {
 	console.error('Error fetching employees: ', err);
@@ -458,7 +483,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
     query += ' ORDER BY employee_id';
 
     try {
-	const result = await pool.query(query, values);
+	const result = await client.query(query, values);
 	res.status(200).json(result.rows);
     } catch (err) {
 	console.error('Error fetching employees: ', err);
@@ -475,7 +500,7 @@ app.get('/api/employees/:employeeId', authenticateToken, async (req, res) => {
     }	
 
     try {
-	const result = await pool.query(`
+	const result = await client.query(`
 	    SELECT * FROM employees 
 	    WHERE employee_id = $1
 	    `, [employeeId]);
@@ -496,12 +521,12 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     const { firstName, lastName, email, isAvailable, role } = req.body;
 
     if (!firstName || !lastName || !email || !isAvailable || !role) {
-	res.status(400).json({ message: 'Request doesn\'t containt required fields' });
+	res.status(400).json({ message: 'Request doesn\'t contain required fields' });
 	return;
     }
 
     try {
-	const result = await pool.query(`
+	const result = await client.query(`
 	    INSERT INTO employees (first_name, last_name, email, is_available, role) 
 	    VALUES ($1, $2, $3, $4, $5) RETURNING *
 	    `, [firstName, lastName, email, isAvailable, role]);
@@ -518,16 +543,16 @@ app.put('/api/employees/:employeeId', authenticateToken, async (req, res) => {
     const { firstName, lastName, email, isAvailable, role} = req.body;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM employees WHERE employee_id = $1
 	    `, [employeeId]);
 
 	if (check.rows.length === 0) {
-	    await pool.end();
+	    await client.end();
 	    return res.status(404).json({ message: 'Employee not found' });
 	}
 
-	const result = await pool.query(`
+	const result = await client.query(`
 	    UPDATE employees
 	    SET first_name = $1, last_name = $2, email = $3, is_available = $4, role = $5
 	    WHERE employee_id = $6
@@ -546,7 +571,7 @@ app.delete('/api/employees/:employeeId', authenticateToken, async (req, res) => 
     const { employeeId } = req.params;
 
     try {
-	const employeeCheck = await pool.query(`
+	const employeeCheck = await client.query(`
 	    SELECT * FROM employees
 	    WHERE employee_id = $1
 	    `, [employeeId]);
@@ -555,12 +580,12 @@ app.delete('/api/employees/:employeeId', authenticateToken, async (req, res) => 
 	    return res.status(404).json({ message: 'Employee not found' });
 	}
 
-	await pool.query(`
+	await client.query(`
 	    DELETE FROM employees 
 	    WHERE employee_id = $1
 	    `, [employeeId]);
 
-	return res.status(204);
+	return res.status(204).json();
     } catch (err) {
 	console.error(err);
 	return res.status(500).json({ message: 'Server error' });
@@ -588,8 +613,8 @@ app.get('/api/assignments', authenticateToken, async (req, res) => {
     query += ' ORDER BY assignment_id';
 
     try {
-	const result = await pool.query(query, values);
-	return res.status(202).json(result.rows);
+	const result = await client.query(query, values);
+	return res.status(200).json(result.rows);
     } catch (err) {
 	console.error('Error while fetching assignments')
 	return res.status(500).json({ message: 'Server error' });
@@ -605,12 +630,12 @@ app.get('/api/assignments/:assignmentId', authenticateToken, async (req, res) =>
     }	
 
     try {
-	const result = await pool.query(`
+	const result = await client.query(`
 	SELECT * FROM assignments 
 	WHERE assignment_id = $1`, [assignmentId]);
 
 	if (result.rows.length === 0) {
-	    return res.status(404).json({ message: 'assignment not found' });
+	    return res.status(404).json({ message: 'Assignment not found' });
 	}
 
 	return res.status(200).json(result.rows);
@@ -629,12 +654,12 @@ app.get('/api/assignments/:costMin/:costMax', authenticateToken, async (req, res
     }	
 
     try {
-	const result = await pool.query(`
+	const result = await client.query(`
 	SELECT * FROM assignments 
 	WHERE cost BETWEEN $1 AND $2`, [costMin, costMax]);
 
 	if (result.rows.length === 0) {
-	    return res.status(404).json({ message: 'assignment not found' });
+	    return res.status(404).json({ message: 'Assignment not found' });
 	}
 
 	return res.status(200).json(result.rows);
@@ -649,12 +674,12 @@ app.post('/api/assignments', authenticateToken, async (req, res) => {
     const { projectId, employeeId, cost } = req.body;
 
     if (!projectId || !employeeId || !cost) {
-	res.status(400).json({ message: 'Request doesn\'t containt required fields' });
+	res.status(400).json({ message: 'Request doesn\'t contain required fields' });
 	return;
     }
 
     try {
-	const result = await pool.query('INSERT INTO assignments (project_id, employee_id, cost) VALUES ($1, $2, $3) RETURNING *', [projectId, employeeId, cost]);
+	const result = await client.query('INSERT INTO assignments (project_id, employee_id, cost) VALUES ($1, $2, $3) RETURNING *', [projectId, employeeId, cost]);
 	res.status(201).json(result.rows[0]);
     } catch (err) {
 	console.error('Error inserting new assignment', err);
@@ -668,16 +693,16 @@ app.put('/api/assignments/:assignmentId', authenticateToken, async (req, res) =>
     const { projectId, employeeId, cost } = req.body;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM assignments WHERE assignment_id = $1
 	    `, [assignmentId]);
 
 	if (check.rows.length === 0) {
-	    await pool.end();
-	    return res.status(404).json({ message: 'assignment not found' });
+	    await client.end();
+	    return res.status(404).json({ message: 'Assignment not found' });
 	}
 
-	const result = await pool.query(`
+	const result = await client.query(`
 	    UPDATE assignments
 	    SET project_id = $1, employee_id = $2, cost = $3
 	    WHERE assignment_id = $4
@@ -686,7 +711,7 @@ app.put('/api/assignments/:assignmentId', authenticateToken, async (req, res) =>
 
 	return res.status(200).json(result.rows[0]);
     } catch (err) {
-	console.error('Error updating a assignment', err);
+	console.error('Error updating an assignment', err);
 	return res.status(500).json({ message: 'Server error' });
     }
 });
@@ -696,26 +721,27 @@ app.delete('/api/assignments/:assignmentId', authenticateToken, async (req, res)
     const { assignmentId } = req.params;
 
     try {
-	const check = await pool.query(`
+	const check = await client.query(`
 	    SELECT * FROM assignments
 	    WHERE assignment_id = $1
 	    `, [assignmentId]);
 
 	if (check.rows.length === 0) {
-	    return res.status(404).json({ message: 'assignment not found' });
+	    return res.status(404).json({ message: 'Assignment not found' });
 	}
 
 
-	await pool.query(`
+	await client.query(`
 	    DELETE FROM assignments 
 	    WHERE assignment_id = $1
 	    `, [assignmentId]);
-	return res.status(204);
+	return res.status(204).json();
     } catch (err) {
 	console.error(err);
 	res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 if (require.main === module) {
     app.listen(port, () => {

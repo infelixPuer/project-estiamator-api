@@ -1,8 +1,4 @@
-DROP DATABASE project_estimator;
-
-CREATE DATABASE project_estimator;
-
-\c project_estimator;
+-- CREATE DATABASE project_estimator;
 
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -46,7 +42,7 @@ INSERT INTO users (username, email, password, role)
 VALUES
 ('estimator1', 'estimator1@example.com', 'hashed_password1', 'estimator'),
 ('admin1', 'admin1@example.com', 'hashed_password2', 'admin'),
-('test', 'test@example.com', 'test_password', 'test');
+('test', 'test@example.com', 'password123', 'test');
 
 INSERT INTO projects (user_id, title, description)
 VALUES
