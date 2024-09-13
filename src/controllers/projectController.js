@@ -15,21 +15,21 @@ class ProjectController {
     
     async createProject(req, res) {
 	const { title, userId, description, status } = req.body;
-	const project = await projectService.create(title, userId, description, status);
+	const project = await projectService.createProject(title, userId, description, status);
 	return res.status(201).json(project);
     }
 
     async updateProject(req, res) {
 	const { id } = req.params;
 	const { title, userId, description, status } = req.body;
-	const project = await projectService.update(id, title, userId, description, status);
+	const project = await projectService.updateProject(id, title, userId, description, status);
 	if (!project) return res.status(404).json({ message: 'Project not found'});
 	return res.status(202).json(project);
     }
 
     async deleteProject(req, res) {
 	const { id } = req.params;
-	await projectService.delete(id);
+	await projectService.deleteProject(id);
 	return res.status(204).send();
     }
 }

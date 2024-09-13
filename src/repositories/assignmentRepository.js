@@ -15,19 +15,19 @@ class AssignmentRepository {
     }
 
     async create(projectId, employeeId, cost) {
-	const result = db.query('INSERT INTO assignments (project_id, employee_id, cost) VALUES $1, $2, $3 RETURNING *', [projectId, employeeId, cost]);
-	const { assigment_id, project_id, employee_id, cost: assignmentCost, assigned_at, finished_at } = result.rows[0];
-	return new Assignment(assigment_id, project_id, employee_id, assignmentCost, assigned_at, finished_at);
+	const result = await db.query('INSERT INTO assignments (project_id, employee_id, cost) VALUES $1, $2, $3 RETURNING *', [projectId, employeeId, cost]);
+	const { assignment_id, project_id, employee_id, cost: assignmentCost, assigned_at, finished_at } = result.rows[0];
+	return new Assignment(assignment_id, project_id, employee_id, assignmentCost, assigned_at, finished_at);
     }
 
     async update(id, projectId, employeeId, cost, assignedAt, finishedAt) {
-	const result = db.query('UPDATE assignments SET project_id = $1, employee_id = $2, cost = $3, assigned_at = $4, finished_at = $5 WHERE assignment_id = $6 RETURNING *', [projectId, employeeId, cost, assignedAt, finishedAt, id]);
+	const result = await db.query('UPDATE assignments SET project_id = $1, employee_id = $2, cost = $3, assigned_at = $4, finished_at = $5 WHERE assignment_id = $6 RETURNING *', [projectId, employeeId, cost, assignedAt, finishedAt, id]);
 	const { assignment_id, project_id, employee_id, cost: assignmentCost, assigned_at, finished_at } = result.rows[0];
 	return new Assignment(assignment_id, project_id, employee_id, assignmentCost, assigned_at, finished_at);
     }
 
     async delete(id) {
-	const result = db.query('DELETE FROM assignments WHERE assignment_id = $1', [id]);
+	const result = await db.query('DELETE FROM assignments WHERE assignment_id = $1', [id]);
     }
 }
 

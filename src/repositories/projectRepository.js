@@ -15,19 +15,19 @@ class ProjectRepository {
     }
 
     async create(title, userId, description, status) {
-	const result = db.query('INSERT INTO projects (title, user_id, description, status) VALUES $1, $2, $3, $4 RETURNING *', [title, userId, description, status]);
+	const result = await db.query('INSERT INTO projects (title, user_id, description, status) VALUES $1, $2, $3, $4 RETURNING *', [title, userId, description, status]);
 	const { project_id, title: projectTitle, user_id, description: projectDescription, status: projectStatus } = result.rows[0];
 	return new Project(project_id, projectTitle, user_id, projectDescription, projectStatus);
     }
 
     async update(id, title, userId, description, status) {
-	const result = db.query('UPDATE projects SET title = $1, user_id = $2, description = $3, status = $4 RETURNING *', [title, userId, description, status, id]);
+	const result = await db.query('UPDATE projects SET title = $1, user_id = $2, description = $3, status = $4 RETURNING *', [title, userId, description, status, id]);
 	const { project_id, title: projectTitle, user_id, description: projectDescription, status: projectStatus } = result.rows[0];
 	return new Project(project_id, projectTitle, user_id, projectDescription, projectStatus);
     }
 
     async delete(id) {
-	const result = db.query('DELETE FROM projects WHERE project_id = $1', [id]);
+	const result = await db.query('DELETE FROM projects WHERE project_id = $1', [id]);
     }
 }
 

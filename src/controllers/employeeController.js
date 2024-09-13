@@ -15,21 +15,21 @@ class EmployeeController {
     
     async createEmployee(req, res) {
 	const { firstName, lastName, email, isAvailable, role } = req.body;
-	const employee = await employeeService.create(firstName, lastName, email, isAvailable, role);
+	const employee = await employeeService.createEmployee(firstName, lastName, email, isAvailable, role);
 	return res.status(201).json(employee);
     }
 
     async updateEmployee(req, res) {
 	const { id } = req.params;
 	const { firstName, lastName, email, isAvailable, role  } = req.body;
-	const employee = await employeeService.update(id, firstName, lastName, email, isAvailable, role );
+	const employee = await employeeService.updateEmployee(id, firstName, lastName, email, isAvailable, role );
 	if (!employee) return res.status(404).json({ message: 'Employee not found'});
 	return res.status(202).json(employee);
     }
 
     async deleteEmployee(req, res) {
 	const { id } = req.params;
-	await employeeService.delete(id);
+	await employeeService.deleteEmployee(id);
 	return res.status(204).send();
     }
 }
