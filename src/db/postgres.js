@@ -1,11 +1,12 @@
 const fs = require('fs');
 const { Pool } = require('pg');
-const { path } = require('path');
+const path = require('path');
+require('dotenv').config( { path: __dirname + '.env' });
 
 const config = {
     host: process.env.POSTGRES_HOST,
     user: process.env.POSTGRES_USER,
-    password: process.env.POSTGRES_PASSWORD,
+    password: String(process.env.POSTGRES_PASSWORD),
     port: 5432,
     database: process.env.POSTGRES_DB,
 };
@@ -18,7 +19,7 @@ async function init() {
 	const sqlFilePath = path.join(__dirname, 'dbsetup.sql');
 	const sql = fs.readFileSync(sqlFilePath, 'utf-8');
 
-	await pool.quer(sql);
+	await pool.query(sql);
 
 	console.log('Database was initialized successfully');
     } catch (err) {
